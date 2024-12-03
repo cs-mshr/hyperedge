@@ -1,13 +1,50 @@
 #include "crow.h"
-//#include "crow_all.h"
+#include <cpr/cpr.h>
 
 int main()
 {
     crow::SimpleApp app;
+    std::string URL = "https://test.deribit.com/api/v2/";
+    std::string access_token;
 
-    CROW_ROUTE(app, "/")([](){
-        return "Hello world";
+    CROW_ROUTE(app, "/health")([&access_token](){
+        return "Up!! Running...!";
     });
 
-    app.port(18080).multithreaded().run();
+    CROW_ROUTE(app, "/auth").methods(crow::HTTPMethod::POST)
+    ([&URL, &access_token](const crow::request& req) {
+
+        auto body = crow::json::load(req.body);
+        if(!body) {
+            return crow::response(400, "Invalid JSON");
+        }
+
+        std::string client_id = body["client_id"].s();
+        std::string client_secret = body["client_secret"].s();
+        std::string grant_type = body["grant_type"].s();
+
+        if (client_id.empty() || client_secret.empty() || grant_type.empty()) {
+            return crow::response(400, "Missing query parameters");
+        }
+
+        std::string url = URL + "public/auth";
+
+        cpr::Response response = cpr::Get(
+            cpr::Parameters{{"client_id", client_id},
+                            {"client_secret", client_secret},
+                            {"grant_type", grant_type}},
+            cpr::Url{url},
+            cpr::Header{{"Content-Type", "application/json"}}
+        );
+
+        if (response.status_code == 200) {
+            auto json_response = crow::json::load(response.text);
+            access_token = json_response["result"]["access_token"].s();
+            return crow::response("Access Token: " + access_token);
+        } else {
+            return crow::response(500, "Failed to authenticate. API Response: " + response.text);
+        }
+    });
+
+    app.bindaddr("127.0.0.1").port(18080).multithreaded().run();
 }
