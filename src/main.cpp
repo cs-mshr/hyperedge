@@ -80,5 +80,37 @@ int main()
         }
     });
 
+    CROW_ROUTE(app, "/cancel").methods(crow::HTTPMethod::POST)
+    ([&URL, &access_token](const crow::request& req) {
+
+        std::string url = URL + "private/get_open_orders";
+
+        auto body = crow::json::load(req.body);
+        if(!body) {
+            return crow::response(400, "Invalid JSON");
+        }
+
+        std::string order_id = body["order_id"].s();
+        if (order_id.empty()) {
+            return crow::response(400, "Missing order_id parameter");
+        }
+
+        cpr::Response response = cpr::Get(
+            cpr::Url{url},
+            cpr::Parameters{{"order_id", order_id}},
+            cpr::Header{{"Authorization", "Bearer " + access_token},
+                        {"Content-Type", "application/json"}
+            });
+
+        if (response.status_code == 200) {
+            return crow::response(response.text);
+        } else {
+            return crow::response(500, "Failed to get order book. API Response: " + response.text);
+        }
+
+    });
+
+
+
     app.bindaddr("127.0.0.1").port(18080).multithreaded().run();
 }
