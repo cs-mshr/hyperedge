@@ -83,7 +83,7 @@ int main()
     CROW_ROUTE(app, "/cancel").methods(crow::HTTPMethod::POST)
     ([&URL, &access_token](const crow::request& req) {
 
-        std::string url = URL + "private/get_open_orders";
+        std::string url = URL + "private/cancel";
 
         auto body = crow::json::load(req.body);
         if(!body) {
@@ -105,11 +105,29 @@ int main()
         if (response.status_code == 200) {
             return crow::response(response.text);
         } else {
-            return crow::response(500, "Failed to get order book. API Response: " + response.text);
+            return crow::response(500, "Failed to cancel order. API Response: " + response.text);
         }
 
     });
 
+    CROW_ROUTE(app, "/cancel_all").methods(crow::HTTPMethod::POST)
+    ([&URL, &access_token](const crow::request& req) {
+
+        std::string url = URL + "private/cancel_all";
+
+        cpr::Response response = cpr::Get(
+            cpr::Url{url},
+            cpr::Header{{"Authorization", "Bearer " + access_token},
+                        {"Content-Type", "application/json"}
+            });
+
+        if (response.status_code == 200) {
+            return crow::response(response.text);
+        } else {
+            return crow::response(500, "Failed to cancel ALL orders. API Response: " + response.text);
+        }
+
+    });
     CROW_ROUTE(app, "/get_open_orders").methods(crow::HTTPMethod::GET)
     ([&URL, &access_token](const crow::request& req) {
 
@@ -123,7 +141,7 @@ int main()
         if (response.status_code == 200) {
             return crow::response(response.text);
         } else {
-            return crow::response(500, "Failed to get order book. API Response: " + response.text);
+            return crow::response(500, "Failed to get open order details. API Response: " + response.text);
         }
 
     });
