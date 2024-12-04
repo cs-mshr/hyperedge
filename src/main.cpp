@@ -46,5 +46,39 @@ int main()
         }
     });
 
+    CROW_ROUTE(app, "/buy").methods(crow::HTTPMethod::POST)
+    ([&URL, &access_token](const crow::request& req) {
+
+        auto body = crow::json::load(req.body);
+        if(!body) {
+            return crow::response(400, "Invalid JSON");
+        }
+
+        std::string amount = body["amount"].s();
+        std::string instrument_name = body["instrument_name"].s();
+        std::string price = body["price"].s();
+
+        if (amount.empty() || instrument_name.empty() || price.empty()) {
+            return crow::response(400, "Missing query parameters");
+        }
+
+        std::string url = URL + "private/buy";
+
+        cpr::Response response = cpr::Get(
+            cpr::Parameters{{"amount", amount},
+                            {"instrument_name", instrument_name},
+                            {"price", price}},
+            cpr::Url{url},
+            cpr::Header{{"Authorization", "Bearer " + access_token},
+                        {"Content-Type", "application/json"}}
+        );
+
+        if (response.status_code == 200) {
+            return crow::response("Buy order placed successfully. API Response: " + response.text);
+        } else {
+            return crow::response(500, "Failed to place buy order. API Response: " + response.text);
+        }
+    });
+
     app.bindaddr("127.0.0.1").port(18080).multithreaded().run();
 }
