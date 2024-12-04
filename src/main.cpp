@@ -110,6 +110,24 @@ int main()
 
     });
 
+    CROW_ROUTE(app, "/get_open_orders").methods(crow::HTTPMethod::GET)
+    ([&URL, &access_token](const crow::request& req) {
+
+        std::string url = URL + "private/get_open_orders";
+        cpr::Response response = cpr::Get(
+            cpr::Url{url},
+            cpr::Header{{"Authorization", "Bearer " + access_token},
+                        {"Content-Type", "application/json"}
+            });
+
+        if (response.status_code == 200) {
+            return crow::response(response.text);
+        } else {
+            return crow::response(500, "Failed to get order book. API Response: " + response.text);
+        }
+
+    });
+
 
 
     app.bindaddr("127.0.0.1").port(18080).multithreaded().run();
