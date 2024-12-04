@@ -128,7 +128,35 @@ int main()
 
     });
 
+    /*
+     * TODO: add depth to api call if provided in req_body.
+     */
+    CROW_ROUTE(app, "/get_order_book").methods(crow::HTTPMethod::POST)
+    ([&URL](const crow::request& req) {
+        auto body = crow::json::load(req.body);
+        if(!body) {
+            return crow::response(400, "Invalid JSON");
+        }
 
+        std::string instrument_name = body["instrument_name"].s();
+        if (instrument_name.empty()) {
+            return crow::response(400, "Missing instrument_name parameter");
+        }
+
+        std::string url = URL + "public/get_order_book";
+
+        cpr::Response response = cpr::Get(
+            cpr::Parameters{{"instrument_name", instrument_name}},
+            cpr::Url{url},
+            cpr::Header{{"Content-Type", "application/json"}}
+        );
+
+        if (response.status_code == 200) {
+            return crow::response(response.text);
+        } else {
+            return crow::response(500, "Failed to get order book. API Response: " + response.text);
+        }
+    });
 
     app.bindaddr("127.0.0.1").port(18080).multithreaded().run();
 }
