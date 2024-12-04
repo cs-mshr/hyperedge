@@ -7,7 +7,7 @@ int main()
     std::string URL = "https://test.deribit.com/api/v2/";
     std::string access_token;
 
-    CROW_ROUTE(app, "/health")([&access_token](){
+    CROW_ROUTE(app, "/health")([](){
         return "Up!! Running...!";
     });
 
@@ -214,6 +214,34 @@ int main()
             return crow::response(response.text);
         } else {
             return crow::response(500, "Failed to get order book. API Response: " + response.text);
+        }
+    });
+
+    CROW_ROUTE(app, "/get_position").methods(crow::HTTPMethod::POST)
+    ([&URL, &access_token](const crow::request& req) {
+        auto body = crow::json::load(req.body);
+        if (!body) {
+            return crow::response(400, "Invalid JSON");
+        }
+
+        std::string instrument_name = body["instrument_name"].s();
+        if (instrument_name.empty()) {
+            return crow::response(400, "Missing instrument_name parameter");
+        }
+
+        std::string url = URL + "private/get_position";
+
+        cpr::Response response = cpr::Get(
+            cpr::Url{url},
+            cpr::Parameters{{"instrument_name", instrument_name}},
+            cpr::Header{{"Authorization", "Bearer " + access_token},
+                        {"Content-Type", "application/json"}}
+        );
+
+        if (response.status_code == 200) {
+            return crow::response(response.text);
+        } else {
+            return crow::response(500, "Failed to retrieve position. API Response: " + response.text);
         }
     });
 
