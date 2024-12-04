@@ -80,6 +80,47 @@ int main()
         }
     });
 
+    /*
+     * TODO: add support for all parameters present in API-DOCS
+    */
+    CROW_ROUTE(app, "/edit").methods(crow::HTTPMethod::POST)
+    ([&URL, &access_token](const crow::request& req) {
+        auto body = crow::json::load(req.body);
+        if (!body) {
+            return crow::response(400, "Invalid JSON");
+        }
+
+        std::string order_id = body["order_id"].s();
+        std::string amount = body.has("amount") ? body["amount"].s() : std::string();
+        std::string price = body.has("price") ? body["price"].s() : std::string();
+        std::string advanced = body.has("advanced") ? body["advanced"].s() : std::string();
+
+        if (order_id.empty()) {
+            return crow::response(400, "Missing order_id parameter");
+        }
+
+        cpr::Parameters params{{"order_id", order_id}};
+        if (!amount.empty()) params.Add({"amount", amount});
+        if (!price.empty()) params.Add({"price", price});
+        if (!advanced.empty()) params.Add({"advanced", advanced});
+
+        std::string url = URL + "private/edit";
+
+        cpr::Response response = cpr::Get(
+            cpr::Url{url},
+            params,
+            cpr::Header{{"Authorization", "Bearer " + access_token},
+                        {"Content-Type", "application/json"}}
+        );
+
+        if (response.status_code == 200) {
+            return crow::response("Order edited successfully. API Response: " + response.text);
+        } else {
+            return crow::response(500, "Failed to edit order. API Response: " + response.text);
+        }
+    });
+
+
     CROW_ROUTE(app, "/cancel").methods(crow::HTTPMethod::POST)
     ([&URL, &access_token](const crow::request& req) {
 
